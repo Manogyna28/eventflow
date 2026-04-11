@@ -109,7 +109,7 @@ export default function Home() {
         textAlign: 'center',
 
         // ✅ Your festival image as background
-        backgroundImage: `url(http://localhost:5000/uploads/p1.jpeg)`,
+        backgroundImage: `url(https://res.cloudinary.com/dyaibrrle/image/upload/v1775919671/p1_ygprme.jpg)`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
