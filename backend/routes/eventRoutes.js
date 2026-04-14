@@ -1,32 +1,51 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
+
 const {
   getEvents,
-  getEventById,
+  getEvent,
   createEvent,
   updateEvent,
   deleteEvent,
-  getMyEvents
-} = require('../controllers/eventController');
-const { protect, organizer } = require('../middleware/authMiddleware');
-const upload = require('../middleware/uploadMiddleware');
+  getMyEvents,
+} = require("../controllers/eventController");
 
-// Get all events (public)
-router.get('/', getEvents);
+const { protect } = require("../middleware/authMiddleware");
+const { requireRole } = require("../middleware/roleMiddleware");
 
-// ✅ MUST come BEFORE /:id — otherwise Express thinks "myevents" is an ID
-router.get('/myevents', protect, organizer, getMyEvents);
+// 🔥 IMPORT CLOUDINARY UPLOAD
+const { upload } = require("../config/cloudinary");
 
-// Get single event by ID (public)
-router.get('/:id', getEventById);
+router.get("/", getEvents);
+router.get("/my-events", protect, requireRole("organizer", "admin"), getMyEvents);
 
-// Create event (organizer only, with image upload)
-router.post('/', protect, organizer, upload.single('image'), createEvent);
+// 🔥 IMPORTANT: keep this BEFORE /:id
+router.get("/:id", getEvent);
 
-// Update event (with optional image)
-router.put('/:id', protect, upload.single('image'), updateEvent);
+// 🔥 CREATE EVENT (image upload)
+router.post(
+  "/",
+  protect,
+  requireRole("organizer", "admin"),
+  upload.single("image"),
+  createEvent
+);
 
-// Delete event
-router.delete('/:id', protect, deleteEvent);
+// 🔥 UPDATE EVENT
+router.put(
+  "/:id",
+  protect,
+  requireRole("organizer", "admin"),
+  upload.single("image"),
+  updateEvent
+);
+
+// 🔥 DELETE EVENT
+router.delete(
+  "/:id",
+  protect,
+  requireRole("organizer", "admin"),
+  deleteEvent
+);
 
 module.exports = router;
