@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { FiCalendar, FiMapPin, FiUsers } from 'react-icons/fi';
 import { format } from 'date-fns';
 
-// Category color map — matches the colorful card design from image
+// 🎨 Category colors
 const categoryColors = {
   Technical:     { bg: 'linear-gradient(135deg, #667eea, #764ba2)', glow: '#764ba2' },
   Cultural:      { bg: 'linear-gradient(135deg, #f093fb, #f5576c)', glow: '#f5576c' },
@@ -15,98 +15,182 @@ const categoryColors = {
 
 export default function EventCard({ event }) {
   const colors = categoryColors[event.category] || categoryColors.Technical;
-  const spotsLeft = event.capacity - event.registrationCount;
+  const spotsLeft = event.capacity - (event.registrationCount || 0);
+
+  // ✅ FIXED IMAGE URL HANDLING
+  const imageUrl =
+  event.image && event.image.startsWith('http')
+    ? event.image
+    : "https://images.unsplash.com/photo-1492684223066-81342ee5ff30";
 
   return (
-    <div style={{
-      background: 'var(--dark-card)',
-      border: '1px solid var(--glass-border)',
-      borderRadius: 20,
-      overflow: 'hidden',
-      transition: 'all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
-      cursor: 'pointer',
-      position: 'relative',
-    }}
-    onMouseEnter={e => {
-      e.currentTarget.style.transform = 'translateY(-8px)';
-      e.currentTarget.style.boxShadow = `0 24px 60px ${colors.glow}33, 0 0 0 1px ${colors.glow}44`;
-    }}
-    onMouseLeave={e => {
-      e.currentTarget.style.transform = 'translateY(0)';
-      e.currentTarget.style.boxShadow = 'none';
-    }}>
-      {/* Banner image / gradient header */}
-      <div style={{
-        height: 160,
-        background: event.image ? `url(http://localhost:5000${event.image}) center/cover` : colors.bg,
+    <div
+      style={{
+        background: 'var(--dark-card)',
+        border: '1px solid var(--glass-border)',
+        borderRadius: 20,
+        overflow: 'hidden',
+        transition: 'all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        cursor: 'pointer',
         position: 'relative',
-        display: 'flex',
-        alignItems: 'flex-end',
-        padding: '0 20px 20px',
-      }}>
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = 'translateY(-8px)';
+        e.currentTarget.style.boxShadow = `0 24px 60px ${colors.glow}33, 0 0 0 1px ${colors.glow}44`;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.boxShadow = 'none';
+      }}
+    >
+      {/* 🔥 IMAGE / HEADER */}
+      <div
+        style={{
+          height: 160,
+          background: imageUrl
+            ? `url(${imageUrl}) center/cover`
+            : colors.bg,
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'flex-end',
+          padding: '0 20px 20px',
+        }}
+      >
         {/* Overlay */}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.7))', borderRadius: '0' }} />
-        {/* Category badge */}
-        <span style={{
-          position: 'relative', zIndex: 2,
-          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255,255,255,0.2)',
-          borderRadius: 20, padding: '4px 12px',
-          fontSize: 11, fontWeight: 700, color: 'white',
-          fontFamily: 'Syne, sans-serif', letterSpacing: '0.5px', textTransform: 'uppercase'
-        }}>{event.category}</span>
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background:
+              'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.7))',
+          }}
+        />
+
+        {/* Category */}
+        <span
+          style={{
+            position: 'relative',
+            zIndex: 2,
+            background: 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            borderRadius: 20,
+            padding: '4px 12px',
+            fontSize: 11,
+            fontWeight: 700,
+            color: 'white',
+            letterSpacing: '0.5px',
+            textTransform: 'uppercase',
+          }}
+        >
+          {event.category}
+        </span>
 
         {/* Featured badge */}
         {event.featured && (
-          <span style={{
-            position: 'absolute', top: 14, right: 14, zIndex: 2,
-            background: 'linear-gradient(135deg, #f97316, #ec4899)',
-            borderRadius: 20, padding: '3px 10px', fontSize: 10,
-            fontWeight: 700, color: 'white', fontFamily: 'Syne, sans-serif',
-          }}>⭐ Featured</span>
+          <span
+            style={{
+              position: 'absolute',
+              top: 14,
+              right: 14,
+              zIndex: 2,
+              background: 'linear-gradient(135deg, #f97316, #ec4899)',
+              borderRadius: 20,
+              padding: '3px 10px',
+              fontSize: 10,
+              fontWeight: 700,
+              color: 'white',
+            }}
+          >
+            ⭐ Featured
+          </span>
         )}
       </div>
 
-      {/* Card Body */}
+      {/* 🔥 BODY */}
       <div style={{ padding: '20px 22px 22px' }}>
-        <h3 style={{
-          fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 18,
-          color: 'var(--text-primary)', marginBottom: 10, lineHeight: 1.3,
-          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
-        }}>{event.title}</h3>
+        <h3
+          style={{
+            fontWeight: 700,
+            fontSize: 18,
+            color: 'var(--text-primary)',
+            marginBottom: 10,
+            lineHeight: 1.3,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {event.title}
+        </h3>
 
-        <p style={{ color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.6, marginBottom: 16,
-          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
-        }}>{event.description}</p>
+        <p
+          style={{
+            color: 'var(--text-secondary)',
+            fontSize: 13,
+            lineHeight: 1.6,
+            marginBottom: 16,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {event.description}
+        </p>
 
-        {/* Meta info */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)', fontSize: 13 }}>
-            <FiCalendar size={14} style={{ color: '#f97316' }} />
+        {/* 📅 Meta */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+            marginBottom: 20,
+          }}
+        >
+          <div style={{ display: 'flex', gap: 8, fontSize: 13 }}>
+            <FiCalendar size={14} />
             {format(new Date(event.date), 'EEE, MMM d, yyyy · h:mm a')}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)', fontSize: 13 }}>
-            <FiMapPin size={14} style={{ color: '#7c3aed' }} />
+
+          <div style={{ display: 'flex', gap: 8, fontSize: 13 }}>
+            <FiMapPin size={14} />
             {event.location}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: spotsLeft < 20 ? '#f97316' : 'var(--text-secondary)', fontSize: 13 }}>
+
+          <div style={{ display: 'flex', gap: 8, fontSize: 13 }}>
             <FiUsers size={14} />
             {spotsLeft > 0 ? `${spotsLeft} spots left` : 'Full'}
           </div>
         </div>
 
-        {/* Footer */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 18, color: event.price === 0 ? '#43e97b' : 'var(--text-primary)' }}>
+        {/* 💰 Footer */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <span style={{ fontWeight: 700, fontSize: 18 }}>
             {event.price === 0 ? 'Free' : `₹${event.price}`}
           </span>
-          <Link to={`/events/${event._id}`} style={{
-            background: colors.bg, border: 'none', borderRadius: 50,
-            padding: '10px 22px', color: 'white', fontFamily: 'Syne, sans-serif',
-            fontWeight: 700, fontSize: 13, cursor: 'pointer', textDecoration: 'none',
-            transition: 'all 0.2s', boxShadow: `0 4px 15px ${colors.glow}55`,
-            display: 'inline-block'
-          }}>Register →</Link>
+
+          <Link
+            to={`/events/${event._id}`}
+            style={{
+              background: colors.bg,
+              borderRadius: 50,
+              padding: '10px 22px',
+              color: 'white',
+              fontWeight: 700,
+              fontSize: 13,
+              textDecoration: 'none',
+            }}
+          >
+            Register →
+          </Link>
         </div>
       </div>
     </div>
