@@ -15,8 +15,11 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: '*',
-  credentials: false
+  origin: [
+    'http://localhost:5173',
+    'https://eventflow-phi-one.vercel.app'
+  ],
+  credentials: true
 }));
 app.use(express.json());
 
