@@ -5,7 +5,6 @@ import toast from 'react-hot-toast';
 import api from '../api/axios';
 import { FiPlus, FiTrash2, FiUsers } from 'react-icons/fi';
 
-// All event categories
 const CATEGORIES = [
   'Technical', 'Cultural', 'Educational',
   'Business', 'Entertainment', 'Social', 'Sports'
@@ -13,29 +12,25 @@ const CATEGORIES = [
 
 export default function OrganizerDashboard() {
 
-  // ── State variables ──────────────────────────────────────
-  const [events, setEvents] = useState([]);           // my events list
-  const [loading, setLoading] = useState(true);       // loading spinner
-  const [activeTab, setActiveTab] = useState('events'); // which tab is open
-  const [showForm, setShowForm] = useState(false);    // show/hide create form
+  const [events, setEvents]           = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [activeTab, setActiveTab]     = useState('events');
+  const [showForm, setShowForm]       = useState(false);
 
-  // Form fields for creating event
   const [form, setForm] = useState({
     title: '', description: '', category: 'Technical',
     date: '', location: '', venue: '',
     capacity: 100, price: 0, tags: ''
   });
 
-  const [imageFile, setImageFile] = useState(null);   // image upload
-  const [submitting, setSubmitting] = useState(false); // submit button state
-  const [participants, setParticipants] = useState([]); // participants list
+  const [imageFile, setImageFile]     = useState(null);
+  const [imageUrl, setImageUrl]       = useState('');      // ✅ URL input
+  const [imageMode, setImageMode]     = useState('file');  // ✅ 'file' | 'url'
+  const [submitting, setSubmitting]   = useState(false);
+  const [participants, setParticipants] = useState([]);
 
-  // ── Load my events when page opens ───────────────────────
-  useEffect(() => {
-    fetchMyEvents();
-  }, []);
+  useEffect(() => { fetchMyEvents(); }, []);
 
-  // ── Fetch events created by this organizer ────────────────
   const fetchMyEvents = async () => {
     try {
       const { data } = await api.get('/events/myevents');
@@ -47,23 +42,24 @@ export default function OrganizerDashboard() {
     }
   };
 
-  // ── Handle Create Event form submit ──────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      // FormData is used because we are uploading an image file
       const formData = new FormData();
       Object.entries(form).forEach(([k, v]) => formData.append(k, v));
-      if (imageFile) formData.append('image', imageFile);
+
+      if (imageMode === 'file' && imageFile) {
+        formData.append('image', imageFile);        // ✅ file upload
+      } else if (imageMode === 'url' && imageUrl) {
+        formData.append('imageUrl', imageUrl);      // ✅ URL upload
+      }
 
       await api.post('/events', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
       toast.success('Event created! 🎉');
-
-      // Reset everything after success
       setShowForm(false);
       setForm({
         title: '', description: '', category: 'Technical',
@@ -71,8 +67,8 @@ export default function OrganizerDashboard() {
         capacity: 100, price: 0, tags: ''
       });
       setImageFile(null);
-
-      // ✅ Refresh the events list so new event appears
+      setImageUrl('');
+      setImageMode('file');
       fetchMyEvents();
 
     } catch (err) {
@@ -82,12 +78,10 @@ export default function OrganizerDashboard() {
     }
   };
 
-  // ── Delete an event ───────────────────────────────────────
   const deleteEvent = async (id) => {
     if (!confirm('Are you sure you want to delete this event?')) return;
     try {
       await api.delete(`/events/${id}`);
-      // Remove from list without reloading page
       setEvents(prev => prev.filter(e => e._id !== id));
       toast.success('Event deleted');
     } catch {
@@ -95,7 +89,6 @@ export default function OrganizerDashboard() {
     }
   };
 
-  // ── View participants of an event ─────────────────────────
   const viewParticipants = async (eventId) => {
     setActiveTab('participants');
     try {
@@ -106,7 +99,6 @@ export default function OrganizerDashboard() {
     }
   };
 
-  // ── UI ────────────────────────────────────────────────────
   return (
     <div style={{ paddingTop: 90, minHeight: '100vh' }}>
       <div className="container section">
@@ -122,18 +114,13 @@ export default function OrganizerDashboard() {
           }}
         >
           <div>
-            <h1 style={{
-              fontFamily: 'Syne, sans-serif',
-              fontWeight: 800, fontSize: 36
-            }}>
+            <h1 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 36 }}>
               Organizer <span className="gradient-text">Dashboard</span>
             </h1>
             <p style={{ color: 'var(--text-secondary)', marginTop: 6 }}>
               Manage your events and participants
             </p>
           </div>
-
-          {/* Toggle Create Form Button */}
           <button
             onClick={() => setShowForm(!showForm)}
             className="btn-glow"
@@ -166,23 +153,17 @@ export default function OrganizerDashboard() {
             <div key={stat.label} className="glass-card"
               style={{ padding: '24px 20px', textAlign: 'center' }}>
               <div style={{ fontSize: 28, marginBottom: 8 }}>{stat.icon}</div>
-              <div style={{
-                fontFamily: 'Syne, sans-serif',
-                fontWeight: 800, fontSize: 32
-              }}>
+              <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 32 }}>
                 {stat.value}
               </div>
-              <div style={{
-                color: 'var(--text-secondary)',
-                fontSize: 13, marginTop: 4
-              }}>
+              <div style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 4 }}>
                 {stat.label}
               </div>
             </div>
           ))}
         </div>
 
-        {/* ── Create Event Form (shown when showForm is true) ── */}
+        {/* ── Create Event Form ── */}
         {showForm && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -198,18 +179,11 @@ export default function OrganizerDashboard() {
               </h2>
 
               <form onSubmit={handleSubmit}>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: 16
-                }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
 
-                  {/* Event Title - full width */}
+                  {/* Title */}
                   <div style={{ gridColumn: '1/-1' }}>
-                    <label style={{
-                      fontSize: 13, color: 'var(--text-secondary)',
-                      display: 'block', marginBottom: 6
-                    }}>
+                    <label style={{ fontSize: 13, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
                       Event Title *
                     </label>
                     <input
@@ -221,12 +195,9 @@ export default function OrganizerDashboard() {
                     />
                   </div>
 
-                  {/* Category Dropdown */}
+                  {/* Category */}
                   <div>
-                    <label style={{
-                      fontSize: 13, color: 'var(--text-secondary)',
-                      display: 'block', marginBottom: 6
-                    }}>
+                    <label style={{ fontSize: 13, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
                       Category *
                     </label>
                     <select
@@ -244,12 +215,9 @@ export default function OrganizerDashboard() {
                     </select>
                   </div>
 
-                  {/* Date & Time */}
+                  {/* Date */}
                   <div>
-                    <label style={{
-                      fontSize: 13, color: 'var(--text-secondary)',
-                      display: 'block', marginBottom: 6
-                    }}>
+                    <label style={{ fontSize: 13, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
                       Date & Time *
                     </label>
                     <input
@@ -264,10 +232,7 @@ export default function OrganizerDashboard() {
 
                   {/* Location */}
                   <div>
-                    <label style={{
-                      fontSize: 13, color: 'var(--text-secondary)',
-                      display: 'block', marginBottom: 6
-                    }}>
+                    <label style={{ fontSize: 13, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
                       City / Location *
                     </label>
                     <input
@@ -281,10 +246,7 @@ export default function OrganizerDashboard() {
 
                   {/* Venue */}
                   <div>
-                    <label style={{
-                      fontSize: 13, color: 'var(--text-secondary)',
-                      display: 'block', marginBottom: 6
-                    }}>
+                    <label style={{ fontSize: 13, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
                       Venue
                     </label>
                     <input
@@ -297,10 +259,7 @@ export default function OrganizerDashboard() {
 
                   {/* Capacity */}
                   <div>
-                    <label style={{
-                      fontSize: 13, color: 'var(--text-secondary)',
-                      display: 'block', marginBottom: 6
-                    }}>
+                    <label style={{ fontSize: 13, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
                       Capacity
                     </label>
                     <input
@@ -314,10 +273,7 @@ export default function OrganizerDashboard() {
 
                   {/* Price */}
                   <div>
-                    <label style={{
-                      fontSize: 13, color: 'var(--text-secondary)',
-                      display: 'block', marginBottom: 6
-                    }}>
+                    <label style={{ fontSize: 13, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
                       Price (₹) · 0 = Free
                     </label>
                     <input
@@ -329,12 +285,9 @@ export default function OrganizerDashboard() {
                     />
                   </div>
 
-                  {/* Tags - full width */}
+                  {/* Tags */}
                   <div style={{ gridColumn: '1/-1' }}>
-                    <label style={{
-                      fontSize: 13, color: 'var(--text-secondary)',
-                      display: 'block', marginBottom: 6
-                    }}>
+                    <label style={{ fontSize: 13, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
                       Tags (comma-separated)
                     </label>
                     <input
@@ -345,12 +298,9 @@ export default function OrganizerDashboard() {
                     />
                   </div>
 
-                  {/* Description - full width */}
+                  {/* Description */}
                   <div style={{ gridColumn: '1/-1' }}>
-                    <label style={{
-                      fontSize: 13, color: 'var(--text-secondary)',
-                      display: 'block', marginBottom: 6
-                    }}>
+                    <label style={{ fontSize: 13, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
                       Description *
                     </label>
                     <textarea
@@ -363,31 +313,99 @@ export default function OrganizerDashboard() {
                     />
                   </div>
 
-                  {/* Image Upload - full width */}
+                  {/* ✅ Image — Toggle between File Upload and URL */}
                   <div style={{ gridColumn: '1/-1' }}>
-                    <label style={{
-                      fontSize: 13, color: 'var(--text-secondary)',
-                      display: 'block', marginBottom: 6
-                    }}>
+                    <label style={{ fontSize: 13, color: 'var(--text-secondary)', display: 'block', marginBottom: 10 }}>
                       Event Banner Image
                     </label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={e => setImageFile(e.target.files[0])}
-                      style={{ color: 'var(--text-primary)', fontSize: 14 }}
-                    />
-                    {/* Show filename if image selected */}
-                    {imageFile && (
-                      <p style={{ color: '#43e97b', fontSize: 13, marginTop: 6 }}>
-                        ✓ {imageFile.name}
-                      </p>
+
+                    {/* Mode Toggle Buttons */}
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                      {[
+                        { mode: 'file', label: '📁 Upload File' },
+                        { mode: 'url',  label: '🔗 Paste URL'   },
+                      ].map(({ mode, label }) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => {
+                            setImageMode(mode);
+                            setImageFile(null);
+                            setImageUrl('');
+                          }}
+                          style={{
+                            padding: '7px 18px',
+                            borderRadius: 10,
+                            border: imageMode === mode
+                              ? '1px solid rgba(124,58,237,0.6)'
+                              : '1px solid rgba(255,255,255,0.1)',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            fontSize: 13,
+                            background: imageMode === mode
+                              ? 'linear-gradient(135deg,rgba(124,58,237,0.3),rgba(249,115,22,0.3))'
+                              : 'rgba(255,255,255,0.05)',
+                            color: 'white',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* File Input */}
+                    {imageMode === 'file' && (
+                      <div>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={e => setImageFile(e.target.files[0])}
+                          style={{ color: 'var(--text-primary)', fontSize: 14 }}
+                        />
+                        {imageFile && (
+                          <p style={{ color: '#43e97b', fontSize: 13, marginTop: 6 }}>
+                            ✓ {imageFile.name}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* URL Input + Live Preview */}
+                    {imageMode === 'url' && (
+                      <div>
+                        <input
+                          type="url"
+                          className="input-glass"
+                          placeholder="https://example.com/banner.jpg"
+                          value={imageUrl}
+                          onChange={e => setImageUrl(e.target.value)}
+                        />
+                        {/* Live preview */}
+                        {imageUrl && (
+                          <img
+                            src={imageUrl}
+                            alt="preview"
+                            onError={e  => e.target.style.display = 'none'}
+                            onLoad={e   => e.target.style.display = 'block'}
+                            style={{
+                              display: 'none',
+                              marginTop: 12,
+                              width: '100%',
+                              height: 160,
+                              objectFit: 'cover',
+                              borderRadius: 12,
+                              border: '1px solid rgba(255,255,255,0.1)',
+                            }}
+                          />
+                        )}
+                      </div>
                     )}
                   </div>
 
-                </div>
+                </div>{/* end grid */}
 
-                {/* Submit Button */}
+                {/* Submit */}
                 <button
                   type="submit"
                   className="btn-glow"
@@ -437,110 +455,86 @@ export default function OrganizerDashboard() {
 
         {/* ── MY EVENTS TAB ── */}
         {activeTab === 'events' && (
-          loading
-            ? (
-              <div style={{
-                textAlign: 'center', padding: 60,
-                color: 'var(--text-secondary)'
-              }}>
-                Loading...
-              </div>
-            )
-            : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {events.map((event, i) => (
-                  <motion.div
-                    key={event._id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.06 }}
-                  >
-                    <div className="glass-card" style={{
-                      padding: '20px 24px',
-                      display: 'flex', alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: 20, flexWrap: 'wrap'
-                    }}>
-                      {/* Event Info */}
-                      <div style={{ flex: 1, minWidth: 200 }}>
-                        <div style={{
-                          fontFamily: 'Syne, sans-serif',
-                          fontWeight: 700, fontSize: 16, marginBottom: 4
-                        }}>
-                          {event.title}
-                        </div>
-                        <div style={{
-                          display: 'flex', gap: 16,
-                          color: 'var(--text-secondary)',
-                          fontSize: 13, flexWrap: 'wrap'
-                        }}>
-                          <span>{event.category}</span>
-                          <span>📅 {format(new Date(event.date), 'MMM d, yyyy')}</span>
-                          <span>📍 {event.location}</span>
-                          <span>🎟️ {event.registrationCount}/{event.capacity}</span>
-                          <span style={{
-                            color: event.price === 0 ? '#43e97b' : '#f97316',
-                            fontWeight: 600
-                          }}>
-                            {event.price === 0 ? 'Free' : `₹${event.price}`}
-                          </span>
-                        </div>
+          loading ? (
+            <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-secondary)' }}>
+              Loading...
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {events.map((event, i) => (
+                <motion.div
+                  key={event._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.06 }}
+                >
+                  <div className="glass-card" style={{
+                    padding: '20px 24px',
+                    display: 'flex', alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 20, flexWrap: 'wrap'
+                  }}>
+                    <div style={{ flex: 1, minWidth: 200 }}>
+                      <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>
+                        {event.title}
                       </div>
-
-                      {/* Action Buttons */}
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        {/* View Participants */}
-                        <button
-                          onClick={() => viewParticipants(event._id)}
-                          style={{
-                            background: 'rgba(96,165,250,0.1)',
-                            border: '1px solid rgba(96,165,250,0.3)',
-                            borderRadius: 10, padding: '8px 14px',
-                            color: '#60a5fa', cursor: 'pointer',
-                            display: 'flex', alignItems: 'center',
-                            gap: 6, fontSize: 13
-                          }}
-                        >
-                          <FiUsers size={14} /> Participants
-                        </button>
-
-                        {/* Delete */}
-                        <button
-                          onClick={() => deleteEvent(event._id)}
-                          style={{
-                            background: 'rgba(239,68,68,0.1)',
-                            border: '1px solid rgba(239,68,68,0.3)',
-                            borderRadius: 10, padding: '8px 10px',
-                            color: '#ef4444', cursor: 'pointer'
-                          }}
-                        >
-                          <FiTrash2 size={14} />
-                        </button>
+                      <div style={{ display: 'flex', gap: 16, color: 'var(--text-secondary)', fontSize: 13, flexWrap: 'wrap' }}>
+                        <span>{event.category}</span>
+                        <span>📅 {format(new Date(event.date), 'MMM d, yyyy')}</span>
+                        <span>📍 {event.location}</span>
+                        <span>🎟️ {event.registrationCount}/{event.capacity}</span>
+                        <span style={{ color: event.price === 0 ? '#43e97b' : '#f97316', fontWeight: 600 }}>
+                          {event.price === 0 ? 'Free' : `₹${event.price}`}
+                        </span>
                       </div>
                     </div>
-                  </motion.div>
-                ))}
-
-                {/* Empty state */}
-                {events.length === 0 && (
-                  <div className="glass-card"
-                    style={{ padding: '60px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 48, marginBottom: 16 }}>🎪</div>
-                    <p style={{ color: 'var(--text-secondary)' }}>
-                      No events yet. Click "Create Event" to get started!
-                    </p>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={() => viewParticipants(event._id)}
+                        style={{
+                          background: 'rgba(96,165,250,0.1)',
+                          border: '1px solid rgba(96,165,250,0.3)',
+                          borderRadius: 10, padding: '8px 14px',
+                          color: '#60a5fa', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center',
+                          gap: 6, fontSize: 13
+                        }}
+                      >
+                        <FiUsers size={14} /> Participants
+                      </button>
+                      <button
+                        onClick={() => deleteEvent(event._id)}
+                        style={{
+                          background: 'rgba(239,68,68,0.1)',
+                          border: '1px solid rgba(239,68,68,0.3)',
+                          borderRadius: 10, padding: '8px 10px',
+                          color: '#ef4444', cursor: 'pointer'
+                        }}
+                      >
+                        <FiTrash2 size={14} />
+                      </button>
+                    </div>
                   </div>
-                )}
-              </div>
-            )
+                </motion.div>
+              ))}
+
+              {events.length === 0 && (
+                <div className="glass-card" style={{ padding: '60px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 48, marginBottom: 16 }}>🎪</div>
+                  <p style={{ color: 'var(--text-secondary)' }}>
+                    No events yet. Click "Create Event" to get started!
+                  </p>
+                </div>
+              )}
+            </div>
+          )
         )}
 
         {/* ── PARTICIPANTS TAB ── */}
         {activeTab === 'participants' && (
           <div>
             {participants.length === 0 ? (
-              <div className="glass-card"
-                style={{ padding: '60px', textAlign: 'center' }}>
+              <div className="glass-card" style={{ padding: '60px', textAlign: 'center' }}>
                 <div style={{ fontSize: 48, marginBottom: 16 }}>👥</div>
                 <p style={{ color: 'var(--text-secondary)' }}>
                   Click "Participants" button on any event to see registrations.
@@ -564,11 +558,7 @@ export default function OrganizerDashboard() {
                       justifyContent: 'space-between',
                       flexWrap: 'wrap', gap: 12
                     }}>
-                      {/* Participant Info */}
-                      <div style={{
-                        display: 'flex', alignItems: 'center', gap: 14
-                      }}>
-                        {/* Avatar */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                         <div style={{
                           width: 40, height: 40, borderRadius: '50%',
                           background: 'linear-gradient(135deg,#7c3aed,#f97316)',
@@ -580,29 +570,16 @@ export default function OrganizerDashboard() {
                           {p.user?.name?.[0]?.toUpperCase()}
                         </div>
                         <div>
-                          <div style={{ fontWeight: 600, fontSize: 15 }}>
-                            {p.user?.name}
-                          </div>
-                          <div style={{
-                            color: 'var(--text-secondary)', fontSize: 13
-                          }}>
-                            {p.user?.email}
-                          </div>
+                          <div style={{ fontWeight: 600, fontSize: 15 }}>{p.user?.name}</div>
+                          <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{p.user?.email}</div>
                         </div>
                       </div>
-
-                      {/* Ticket info */}
-                      <div style={{
-                        display: 'flex', gap: 12,
-                        alignItems: 'center',
-                        color: 'var(--text-secondary)', fontSize: 12
-                      }}>
+                      <div style={{ display: 'flex', gap: 12, alignItems: 'center', color: 'var(--text-secondary)', fontSize: 12 }}>
                         <span>#{p.ticketId?.slice(-8)}</span>
                         <span style={{
                           background: '#43e97b22', color: '#43e97b',
                           border: '1px solid #43e97b44',
-                          borderRadius: 20, padding: '2px 10px',
-                          fontWeight: 700
+                          borderRadius: 20, padding: '2px 10px', fontWeight: 700
                         }}>
                           {p.status}
                         </span>

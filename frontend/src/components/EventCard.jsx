@@ -17,11 +17,13 @@ export default function EventCard({ event }) {
   const colors = categoryColors[event.category] || categoryColors.Technical;
   const spotsLeft = event.capacity - (event.registrationCount || 0);
 
-  // ✅ FIXED IMAGE URL HANDLING
+  // ✅ FIXED IMAGE HANDLING (MAIN FIX)
   const imageUrl =
   event.image && event.image.startsWith('http')
     ? event.image
     : "https://images.unsplash.com/photo-1492684223066-81342ee5ff30";
+  // 🧪 DEBUG (remove later if not needed)
+  console.log(event.title, event.image);
 
   return (
     <div
@@ -47,9 +49,7 @@ export default function EventCard({ event }) {
       <div
         style={{
           height: 160,
-          background: imageUrl
-            ? `url(${imageUrl}) center/cover`
-            : colors.bg,
+          background: `url(${imageUrl}) center/cover`, // ✅ FIXED
           position: 'relative',
           display: 'flex',
           alignItems: 'flex-end',
