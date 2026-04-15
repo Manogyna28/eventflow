@@ -3,7 +3,7 @@ const router = express.Router();
 
 const {
   getEvents,
-  getEvent,
+  getEventById,   // ✅ FIXED
   createEvent,
   updateEvent,
   deleteEvent,
@@ -13,16 +13,24 @@ const {
 const { protect } = require("../middleware/authMiddleware");
 const { requireRole } = require("../middleware/roleMiddleware");
 
-// 🔥 IMPORT CLOUDINARY UPLOAD
+// Cloudinary upload
 const { upload } = require("../config/cloudinary");
 
+// GET all events
 router.get("/", getEvents);
-router.get("/my-events", protect, requireRole("organizer", "admin"), getMyEvents);
 
-// 🔥 IMPORTANT: keep this BEFORE /:id
-router.get("/:id", getEvent);
+// GET my events
+router.get(
+  "/my-events",
+  protect,
+  requireRole("organizer", "admin"),
+  getMyEvents
+);
 
-// 🔥 CREATE EVENT (image upload)
+// GET single event
+router.get("/:id", getEventById); // ✅ FIXED
+
+// CREATE event
 router.post(
   "/",
   protect,
@@ -31,7 +39,7 @@ router.post(
   createEvent
 );
 
-// 🔥 UPDATE EVENT
+// UPDATE event
 router.put(
   "/:id",
   protect,
@@ -40,7 +48,7 @@ router.put(
   updateEvent
 );
 
-// 🔥 DELETE EVENT
+// DELETE event
 router.delete(
   "/:id",
   protect,

@@ -20,7 +20,7 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Serve uploaded images statically
+// ✅ FIX: Serve uploaded images
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
@@ -29,7 +29,18 @@ app.use('/api/events', require('./routes/eventRoutes'));
 app.use('/api/registrations', require('./routes/registrationRoutes'));
 
 // Health check
-app.get('/', (req, res) => res.json({ message: 'EventFlow API Running ✅' }));
+app.get('/', (req, res) => {
+  res.json({ message: 'EventFlow API Running ✅' });
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error("ERROR:", err.message);
+  res.status(500).json({ message: "Server Error" });
+});
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});

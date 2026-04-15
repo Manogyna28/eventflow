@@ -1,123 +1,180 @@
-const Event = require("../models/Event");
-const { cloudinary } = require("../config/cloudinary");
+const Event = require('../models/Event');
+const { deleteImage, uploadFromUrl } = require('../config/cloudinary');
 
-// 🔥 Delete old image from Cloudinary
-const deleteFromCloudinary = async (imageUrl) => {
-  if (!imageUrl || !imageUrl.includes("cloudinary")) return;
-
-  try {
-    const parts = imageUrl.split("/");
-    const publicId = parts.slice(-2).join("/").split(".")[0];
-
-    await cloudinary.uploader.destroy(publicId);
-  } catch (err) {
-    console.error("Cloudinary delete error:", err.message);
-  }
-};
-
-// ✅ GET ALL EVENTS
+// GET /api/events
 const getEvents = async (req, res) => {
   try {
-    const events = await Event.find().sort({ createdAt: -1 });
-    res.json(events);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    const { category, search, location, status, featured, page = 1, limit = 12 } = req.query;
+    const query = {};
+
+    if (category) query.category = category;
+    if (location) query.location = { $regex: location, $options: 'i' };
+    if (status)   query.status   = status;
+    if (featured) query.featured = true;
+    if (search)   query.$or = [
+      { title:       { $regex: search, $options: 'i' } },
+      { description: { $regex: search, $options: 'i' } },
+      { tags:        { $in: [new RegExp(search, 'i')] } },
+    ];
+
+    const total  = await Event.countDocuments(query);
+    const events = await Event.find(query)
+      .populate('organizer', 'name email avatar')
+      .sort({ date: 1 })
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit));
+
+    res.json({ events, total, page: parseInt(page), pages: Math.ceil(total / limit) });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ✅ GET SINGLE EVENT
+// GET /api/events/featured
+const getFeaturedEvents = async (req, res) => {
+  try {
+    const events = await Event.find({ featured: true, status: 'upcoming' })
+      .populate('organizer', 'name')
+      .sort({ date: 1 })
+      .limit(6);
+    res.json(events);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// GET /api/events/:id
 const getEventById = async (req, res) => {
   try {
-    const event = await Event.findById(req.params.id);
-
-    if (!event) {
-      return res.status(404).json({ message: "Event not found" });
-    }
-
+    const event = await Event.findById(req.params.id)
+      .populate('organizer', 'name email avatar bio');
+    if (!event) return res.status(404).json({ message: 'Event not found' });
     res.json(event);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ✅ CREATE EVENT
+// POST /api/events
 const createEvent = async (req, res) => {
   try {
-    // 🔥 IMPORTANT LINE
-    const image = req.file ? req.file.path : "";
+    console.log('📁 req.file:', req.file);
+    console.log('📝 req.body:', req.body);
+
+    const {
+      title, description, category, date, endDate,
+      location, venue, capacity, price, tags,
+      registrationDeadline, imageUrl,             // ✅ imageUrl from body
+    } = req.body;
+
+    let image = '';
+
+    if (req.file) {
+      // File uploaded via multer → Cloudinary (existing flow)
+      image = req.file.path;
+      console.log('✅ Image from file upload:', image);
+    } else if (imageUrl && imageUrl.startsWith('http')) {
+      // URL provided → fetch and upload to Cloudinary
+      try {
+        image = await uploadFromUrl(imageUrl);
+        console.log('✅ Image from URL upload:', image);
+      } catch (err) {
+        console.error('⚠️ URL upload failed, storing URL directly:', err.message);
+        image = imageUrl; // fallback: store as-is
+      }
+    }
 
     const event = await Event.create({
-      ...req.body,
+      title, description, category, date,
+      endDate:              endDate             || null,
+      location, venue,
+      capacity:             Number(capacity)    || 100,
+      price:                Number(price)       || 0,
       image,
-      organizer: req.user._id,
+      organizer:            req.user._id,
+      registrationDeadline: registrationDeadline || null,
+      tags: tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : [],
     });
 
+    console.log('✅ Event created with image:', event.image);
     res.status(201).json(event);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    console.error('❌ createEvent error:', err.message);
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ✅ UPDATE EVENT
+// PUT /api/events/:id
 const updateEvent = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+    if (
+      event.organizer.toString() !== req.user._id.toString() &&
+      req.user.role !== 'admin'
+    ) return res.status(403).json({ message: 'Not authorized' });
 
-    if (!event) {
-      return res.status(404).json({ message: "Event not found" });
-    }
+    const fields = [
+      'title', 'description', 'category', 'date', 'endDate',
+      'location', 'venue', 'capacity', 'price', 'status', 'featured', 'registrationDeadline',
+    ];
+    fields.forEach(f => { if (req.body[f] !== undefined) event[f] = req.body[f]; });
 
-    // 🔥 Replace image if new uploaded
     if (req.file) {
-      await deleteFromCloudinary(event.image);
+      // New file uploaded
+      await deleteImage(event.image);
       event.image = req.file.path;
+    } else if (req.body.imageUrl && req.body.imageUrl.startsWith('http')) {
+      // New URL provided
+      try {
+        await deleteImage(event.image);
+        event.image = await uploadFromUrl(req.body.imageUrl);
+      } catch (err) {
+        console.error('⚠️ URL upload failed on update:', err.message);
+        event.image = req.body.imageUrl; // fallback
+      }
     }
 
-    Object.assign(event, req.body);
+    if (req.body.tags)
+      event.tags = req.body.tags.split(',').map(t => t.trim()).filter(Boolean);
 
     const updated = await event.save();
-
     res.json(updated);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ✅ DELETE EVENT
+// DELETE /api/events/:id
 const deleteEvent = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+    if (
+      event.organizer.toString() !== req.user._id.toString() &&
+      req.user.role !== 'admin'
+    ) return res.status(403).json({ message: 'Not authorized' });
 
-    if (!event) {
-      return res.status(404).json({ message: "Event not found" });
-    }
-
-    await deleteFromCloudinary(event.image);
-
+    await deleteImage(event.image);
     await event.deleteOne();
-
-    res.json({ message: "Event deleted" });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.json({ message: 'Event deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ✅ MY EVENTS
+// GET /api/events/organizer/myevents
 const getMyEvents = async (req, res) => {
   try {
-    const events = await Event.find({ organizer: req.user._id });
+    const events = await Event.find({ organizer: req.user._id })
+      .sort({ createdAt: -1 });
     res.json(events);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
-// 🔥 FIX EXPORT NAME
 module.exports = {
-  getEvents,
-  getEvent: getEventById, // ✅ IMPORTANT FIX
-  createEvent,
-  updateEvent,
-  deleteEvent,
-  getMyEvents,
+  getEvents, getFeaturedEvents, getEventById,
+  createEvent, updateEvent, deleteEvent, getMyEvents,
 };
