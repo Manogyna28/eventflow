@@ -3,7 +3,7 @@ const router = express.Router();
 
 const {
   getEvents,
-  getEventById,   // ✅ FIXED
+  getEventById,
   createEvent,
   updateEvent,
   deleteEvent,
@@ -13,24 +13,33 @@ const {
 const { protect } = require("../middleware/authMiddleware");
 const { requireRole } = require("../middleware/roleMiddleware");
 
-// Cloudinary upload
 const { upload } = require("../config/cloudinary");
 
-// GET all events
+// ==============================
+// PUBLIC ROUTES
+// ==============================
 router.get("/", getEvents);
+router.get(                          // ← MUST come before /:id
+  "/my-events",                      // ← fix name (was /myevents)
+  protect,
+  requireRole("organizer", "admin"),
+  getMyEvents
+);
+router.get("/:id", getEventById);
 
-// GET my events
+// ==============================
+// PRIVATE ROUTES (AUTH REQUIRED)
+// ==============================
+
+// ✅ FIXED: match frontend route (/events/myevents)
 router.get(
-  "/my-events",
+  "/myevents",
   protect,
   requireRole("organizer", "admin"),
   getMyEvents
 );
 
-// GET single event
-router.get("/:id", getEventById); // ✅ FIXED
-
-// CREATE event
+// CREATE EVENT
 router.post(
   "/",
   protect,
@@ -39,7 +48,7 @@ router.post(
   createEvent
 );
 
-// UPDATE event
+// UPDATE EVENT
 router.put(
   "/:id",
   protect,
@@ -48,7 +57,7 @@ router.put(
   updateEvent
 );
 
-// DELETE event
+// DELETE EVENT
 router.delete(
   "/:id",
   protect,
