@@ -6,7 +6,6 @@ import EventCard from '../components/EventCard';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import { FiSearch, FiX } from 'react-icons/fi';
 
-// All filter categories
 const CATEGORIES = [
   'All', 'Technical', 'Cultural', 'Educational',
   'Business', 'Entertainment', 'Social', 'Sports'
@@ -15,58 +14,68 @@ const CATEGORIES = [
 export default function Events() {
   const [searchParams] = useSearchParams();
 
-  // ── State ─────────────────────────────────────────────────
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const [search, setSearch] = useState('');
   const [location, setLocation] = useState('');
 
-  // Read category from URL (?category=Technical) or default to 'All'
   const [category, setCategory] = useState(
     searchParams.get('category') || 'All'
   );
 
-  // ── Fetch events from backend ─────────────────────────────
+  // =========================
+  // FETCH EVENTS (FIXED)
+  // =========================
   const fetchEvents = async () => {
     setLoading(true);
+
     try {
       const params = {};
+
       if (category !== 'All') params.category = category;
-      if (search)   params.search   = search;
+      if (search) params.search = search;
       if (location) params.location = location;
 
       const { data } = await api.get('/events', { params });
-      setEvents(data);
-    } catch {
-      // silently fail — no events shown
+
+      console.log("✅ EVENTS API RESPONSE:", data);
+
+      // SAFE FIX (prevents crash)
+      setEvents(Array.isArray(data?.events) ? data.events : []);
+
+    } catch (err) {
+      console.error("❌ Failed to load events:");
+      console.error(err?.response?.data || err.message);
+
+      setEvents([]); // fallback
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ Re-fetch whenever category or location changes
+  // fetch on category/location change
   useEffect(() => {
     fetchEvents();
   }, [category, location]);
 
-  // ── Search form submit ────────────────────────────────────
+  // search submit
   const handleSearch = (e) => {
     e.preventDefault();
     fetchEvents();
   };
 
-  // ── Clear all filters ─────────────────────────────────────
+  // clear filters
   const clearFilters = () => {
     setSearch('');
     setCategory('All');
     setLocation('');
   };
 
-  // ── UI ────────────────────────────────────────────────────
   return (
     <div style={{ paddingTop: 90, minHeight: '100vh' }}>
 
-      {/* ── Header with Search & Filters ── */}
+      {/* HEADER */}
       <div style={{
         background: 'linear-gradient(135deg, rgba(124,58,237,0.15), rgba(249,115,22,0.1))',
         borderBottom: '1px solid var(--glass-border)',
@@ -74,41 +83,40 @@ export default function Events() {
       }}>
         <div className="container">
 
-          {/* Page Title */}
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            style={{
-              fontFamily: 'Syne, sans-serif', fontWeight: 800,
-              fontSize: 'clamp(32px,5vw,52px)', marginBottom: 8
-            }}
-          >
+          <h1 style={{
+            fontFamily: 'Syne, sans-serif',
+            fontWeight: 800,
+            fontSize: 'clamp(32px,5vw,52px)',
+            marginBottom: 8
+          }}>
             Discover <span className="gradient-text">Events</span>
-          </motion.h1>
+          </h1>
 
-          {/* Event count */}
           <p style={{
             color: 'var(--text-secondary)',
-            fontSize: 17, marginBottom: 32
+            fontSize: 17,
+            marginBottom: 32
           }}>
             {loading ? 'Loading...' : `${events.length} events found`}
           </p>
 
-          {/* ── Search bar ── */}
-          <form
-            onSubmit={handleSearch}
-            style={{
-              display: 'flex', gap: 12,
-              flexWrap: 'wrap', marginBottom: 24
-            }}
-          >
-            {/* Search input */}
+          {/* SEARCH BAR */}
+          <form onSubmit={handleSearch} style={{
+            display: 'flex',
+            gap: 12,
+            flexWrap: 'wrap',
+            marginBottom: 24
+          }}>
             <div style={{ position: 'relative', flex: 1, minWidth: 260 }}>
               <FiSearch size={16} style={{
-                position: 'absolute', left: 16,
-                top: '50%', transform: 'translateY(-50%)',
-                color: 'var(--text-secondary)', pointerEvents: 'none'
+                position: 'absolute',
+                left: 16,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'var(--text-secondary)',
+                pointerEvents: 'none'
               }} />
+
               <input
                 className="input-glass"
                 value={search}
@@ -118,7 +126,6 @@ export default function Events() {
               />
             </div>
 
-            {/* Location input */}
             <input
               className="input-glass"
               value={location}
@@ -127,32 +134,22 @@ export default function Events() {
               style={{ width: 200 }}
             />
 
-            {/* Search button */}
-            <button
-              type="submit"
-              className="btn-glow"
-              style={{ padding: '12px 28px' }}
-            >
+            <button type="submit" className="btn-glow">
               Search
             </button>
 
-            {/* Clear button — only shows if filters are active */}
             {(search || category !== 'All' || location) && (
               <button
                 type="button"
                 onClick={clearFilters}
                 className="btn-outline"
-                style={{
-                  padding: '12px 20px',
-                  display: 'flex', alignItems: 'center', gap: 6
-                }}
               >
                 <FiX size={14} /> Clear
               </button>
             )}
           </form>
 
-          {/* ── Category filter buttons ── */}
+          {/* CATEGORY FILTER */}
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             {CATEGORIES.map(cat => (
               <button
@@ -162,16 +159,11 @@ export default function Events() {
                   background: category === cat
                     ? 'linear-gradient(135deg, #7c3aed, #f97316)'
                     : 'var(--glass)',
-                  border: `1px solid ${category === cat ? 'transparent' : 'var(--glass-border)'}`,
-                  borderRadius: 50, padding: '8px 20px',
-                  color: 'var(--text-primary)', cursor: 'pointer',
-                  fontFamily: 'Syne, sans-serif',
-                  fontWeight: 600, fontSize: 13,
-                  transition: 'all 0.2s',
-                  backdropFilter: 'blur(10px)',
-                  boxShadow: category === cat
-                    ? '0 4px 15px rgba(124,58,237,0.3)'
-                    : 'none',
+                  border: '1px solid var(--glass-border)',
+                  borderRadius: 50,
+                  padding: '8px 20px',
+                  cursor: 'pointer',
+                  color: 'white'
                 }}
               >
                 {cat}
@@ -182,17 +174,16 @@ export default function Events() {
         </div>
       </div>
 
-      {/* ── Events Grid ── */}
+      {/* EVENTS LIST */}
       <div className="container section">
+
         {loading ? (
-          // Show skeletons while loading
           <div className="events-grid">
             {Array.from({ length: 9 }).map((_, i) => (
               <LoadingSkeleton key={i} />
             ))}
           </div>
         ) : events.length > 0 ? (
-          // Show event cards
           <div className="events-grid">
             {events.map((event, i) => (
               <motion.div
@@ -206,28 +197,12 @@ export default function Events() {
             ))}
           </div>
         ) : (
-          // No results state
-          <div style={{
-            textAlign: 'center', padding: '80px 0',
-            color: 'var(--text-secondary)'
-          }}>
-            <div style={{ fontSize: 60, marginBottom: 20 }}>🔍</div>
-            <h3 style={{
-              fontFamily: 'Syne, sans-serif', fontSize: 24,
-              marginBottom: 12, color: 'var(--text-primary)'
-            }}>
-              No events found
-            </h3>
-            <p>Try adjusting your filters or search terms</p>
-            <button
-              onClick={clearFilters}
-              className="btn-glow"
-              style={{ marginTop: 24 }}
-            >
-              Clear Filters
-            </button>
+          <div style={{ textAlign: 'center', padding: '80px 0' }}>
+            <h3>No events found</h3>
+            <p>Try adjusting filters</p>
           </div>
         )}
+
       </div>
 
     </div>

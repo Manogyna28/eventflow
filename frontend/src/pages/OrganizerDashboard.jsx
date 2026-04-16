@@ -1,3 +1,4 @@
+//organizerDashboard.jsx
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
@@ -33,7 +34,7 @@ export default function OrganizerDashboard() {
 
   const fetchMyEvents = async () => {
     try {
-      const { data } = await api.get('/events/myevents');
+      const { data } = await api.get('/events/my-events');;
       setEvents(data);
     } catch {
       toast.error('Failed to load events');
@@ -92,7 +93,7 @@ export default function OrganizerDashboard() {
   const viewParticipants = async (eventId) => {
     setActiveTab('participants');
     try {
-      const { data } = await api.get(`/registrations/event/${eventId}`);
+      const { data } = await api.get('/events/my-events');
       setParticipants(data);
     } catch {
       toast.error('Failed to load participants');
