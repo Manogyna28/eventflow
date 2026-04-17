@@ -1,5 +1,7 @@
 const Registration = require('../models/Registration');
 const Event = require('../models/Event');
+const User = require('../models/User');  // ← ADD THIS LINE at the top
+const { sendEmail } = require('../utils/notifications'); 
 
 // @POST /api/registrations/:eventId - register for event
 const registerForEvent = async (req, res) => {
@@ -19,6 +21,20 @@ const registerForEvent = async (req, res) => {
 
     // Increment registration count
     await Event.findByIdAndUpdate(event._id, { $inc: { registrationCount: 1 } });
+    const user = await User.findById(req.user._id);
+
+    // ✅ Email
+    await sendEmail(
+      user.email,
+      `✅ Registration Confirmed — ${event.title}`,
+      `
+        <h2>You're registered for ${event.title}! 🎉</h2>
+        <p><b>Date:</b> ${new Date(event.date).toDateString()}</p>
+        <p><b>Location:</b> ${event.location}</p>
+        <p><b>Venue:</b> ${event.venue || 'TBA'}</p>
+        <p>Thank you for registering on EventFlow!</p>
+      `
+    );
     res.status(201).json(registration);
   } catch (error) {
     res.status(500).json({ message: error.message });
